@@ -1,64 +1,67 @@
 #include <stdio.h>
-#include <string.h>
-#include <sys/socket.h>
 #include <sys/types.h>
-#include <netdb.h>
-#include <arpa/inet.h>
+#include <sys/socket.h>
 #include <unistd.h>
-#include <stdlib.h>
-#define MAX 1024
+#include <netdb.h>
+#include <string.h>
+#include <arpa/inet.h>
+
 int main() {
     int client = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
     struct sockaddr_in addr;
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = inet_addr("127.0.0.1");
-    addr.sin_port = htons(9000);
+    addr.sin_port = htons(9000); 
 
-    int ret = connect(client, (struct sockaddr *)&addr, sizeof(addr));
-    if (ret == -1)
-    {
+    if (connect(client, (struct sockaddr *)&addr, sizeof(addr))) {
         perror("connect() failed");
         return 1;
     }
-    char tenMT[MAX];
-    printf("Nhap ten may tinh: ");
-    fgets(tenMT, MAX, stdin);
-    tenMT[strcspn(tenMT,"\n")] = 0;
+        
+    // Nhap du lieu va tao buffer chua du lieu can gui
+    char buf[256];
+    int pos = 0;
 
-    int so_o_dia;
-    printf("\nNhap so o dia: ");
-    scanf("%d", &so_o_dia);
+    char computer_name[64];
+    printf("Nhap ten may tinh: ");
+    scanf("%s", computer_name);
+
+    strcpy(buf, computer_name);
+    pos += strlen(computer_name);
+    buf[pos] = 0;
+    pos++;
+
+    int num_drives;
+    printf("Nhap so o dia: ");
+    scanf("%d", &num_drives);
     getchar();
 
-    char buff[(so_o_dia + 1) * (MAX + 8)];
-    char buffer[MAX];
-    char diskName[MAX];
-    char diskSize[MAX];
-    strcat(buff,tenMT);
-    // char str[20];
-    // sprintf(str, "\nSo o dia: %d", so_o_dia);
-    // strcat(buff,str);
-    
-    int i = 0;
-    for(i = 0; i < so_o_dia; i++) {
-        printf("\nNhap ten o dia so %d: ", i+1);
-        fgets(diskName, MAX, stdin);
-        diskName[strcspn(diskName,"\n")] = 0;
+    char drive_letter;
+    unsigned short drive_size;
 
-        printf("\nNhap kick co o dia so %d: ", i+1);
-        fgets(diskSize, MAX, stdin);
-        diskSize[strcspn(diskSize,"\n")] = 0;
-        
-        sprintf(buffer, "\n%s - %sGB", diskName,diskSize);
-        strcat(buff,buffer);
+    for (int i = 0; i < num_drives; i++)
+    {
+        printf("Nhap ky tu: ");
+        scanf("%c", &drive_letter);
+
+        buf[pos] = drive_letter;
+        pos++;
+
+        printf("Nhap kich thuoc: ");
+        scanf("%hd", &drive_size);
+        getchar();
+
+        memcpy(buf + pos, &drive_size, sizeof(drive_size));
+        pos += sizeof(drive_size);
     }
-    printf("%s", buff);
-    if(send(client, buff, strlen(buff),0) == -1) {
-        perror("send failed");
-        return 1;
-    }
-    printf("success");
+
+    printf("Buffer size: %d\n", pos);
+
+    send(client, buf, pos, 0);
+
+    // Ket thuc, dong socket
     close(client);
+
     return 0;
 }
